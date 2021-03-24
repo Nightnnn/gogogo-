@@ -1,0 +1,128 @@
+#include<reg52.h>
+#define uchar unsigned char
+#define uint unsigned int
+
+sbit rs=P2^5;
+sbit rw=P2^6;
+sbit en=P2^7;
+
+uchar code table[]="   2020-11-25";
+uchar code table1[]="   23:59:58  ";
+uchar code table2[]="0123456789";
+
+uchar shi,fen,miao,a;	
+
+void delay(uint z)
+{
+	uint x,y;
+	for(x=z;x>0;x--)
+		for(y=0;y<110;y++);
+}
+
+void write_com(uchar com)
+{
+	rs=0;
+	rw=0;
+	P3=com;
+	delay(5);
+	en=1;
+	delay(5);
+	en=0;
+	
+
+}
+void write_data(uchar data1)
+{
+	rs=1;
+	rw=0;
+	P3=data1;
+	delay(5);
+	en=1;
+	delay(5);
+	en=0;
+	
+
+}
+
+void init()
+{
+
+	write_com(0x38);
+	write_com(0x0c);
+	write_com(0x06);
+	write_com(0x01);
+	write_com(0x80);
+	TMOD=0x01;
+	EA=1;
+	ET0=1;
+	TH0=(65536-50000)/256;
+	TL0=(65536-50000)%256;
+	TR0=1;
+	shi=23;
+	fen=59;
+	miao=58;
+}
+
+ 
+int main()
+{
+	
+	
+	uchar i,m;
+	
+	init();
+	
+	for(i=0;i<14;i++){
+		write_data(table[i]);
+		delay(20);
+	}
+	write_com(0x80+0x40);
+		for(m=0;m<13;m++){
+		write_data(table1[m]);
+		delay(20);
+	}
+	while(1);
+	
+	
+
+	
+}
+void func1(uchar add,uchar date)
+{
+	uchar shi,ge;
+	shi=date/10;
+	ge=date%10;	
+	write_com(add);
+	write_data(table2[ge]);
+	write_com(add-1);
+	write_data(table2[shi]);
+
+	
+}
+
+void func() interrupt 1
+{
+	TH0=(65536-50000)/256;
+	TL0=(65536-50000)%256;
+	
+	a++;
+	if(a==20){
+		a=0;
+		miao++;
+		if(miao>=60){
+			miao=0;
+			fen++;
+			if(fen>=60){
+				fen=0;
+				shi++;
+				if(shi>=24){
+					shi=0;
+				}
+				func1(0x80+0x40+0x04,shi);
+			}
+			func1(0x80+0x40+0x07,fen);
+
+		}
+		func1(0x80+0x40+0x0a,miao);
+	}	
+}
